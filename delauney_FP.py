@@ -1,4 +1,4 @@
-#delauney feature python
+#delaunay feature python
 
 import numpy as np
 from scipy.stats import qmc
@@ -7,7 +7,7 @@ import Part
 from math import pi
 V3 = App.Vector
 
-class delauney_FP():
+class delaunay_FP():
     def __init__(self, fp):
         fp.addProperty("App::PropertyFloat", "xsize", "Parameters", "x length of target rectangle").xsize = 2*pi*10
         fp.addProperty("App::PropertyFloat", "ysize", "Parameters", "y length of target rectangle").ysize = 40
@@ -65,8 +65,11 @@ class delauney_FP():
         return fatList
 
     def execute(self, fp):
+        maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
         if fp.npts < 3:
-            fp.npts = max((3, int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2))))
+            fp.npts = max((3, maxnpts))
+        if fp.npts > maxnpts:
+            fp.npts = maxnpts
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
         if fp.periodic:
@@ -83,7 +86,7 @@ class delauney_FP():
             wire = Part.makePolygon(vs)
             wires.append(wire)
 
-        #Part.show(Part.Compound(wires), 'Delauney')
+        #Part.show(Part.Compound(wires), 'Delaunay')
 
         offsetWires = list()
         for wire in wires:
@@ -100,14 +103,14 @@ class delauney_FP():
         #Part.show(Part.Compound(fatWires), 'fatWires')
         fp.Shape = Part.Compound(fatWires)
 
-def makeDelauney(doc):
-    a=doc.addObject("Part::FeaturePython","Delauney")
-    delauney_FP(a)
+def makeDelaunay(doc):
+    a=doc.addObject("Part::FeaturePython","Delaunay")
+    delaunay_FP(a)
     a.ViewObject.Proxy=0
     doc.recompute()
     return a
 
-def createSketch(doc, delauneyname):
+def createSketch(doc, delaunayname):
     '''
     creates target rectangle sketch
     '''
@@ -127,8 +130,8 @@ def createSketch(doc, delauneyname):
     Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 1, -1, 1))
     Sketch.addConstraint(Sketcher.Constraint('DistanceY', geo1, 1, geo1, 2, 40.0))
     Sketch.addConstraint(Sketcher.Constraint('DistanceX', geo2, 2, geo2, 1, 62.83185307179586))
-    Sketch.setExpression('Constraints[10]', f'{delauneyname}.xsize')
-    Sketch.setExpression('Constraints[9]', f'{delauneyname}.ysize')
+    Sketch.setExpression('Constraints[10]', f'{delaunayname}.xsize')
+    Sketch.setExpression('Constraints[9]', f'{delaunayname}.ysize')
     Sketch.Visibility = False
     Sketch.ViewObject.Visibility = False
     return Sketch
@@ -137,8 +140,8 @@ def createSketch(doc, delauneyname):
 
 if __name__ == "__main__":
     doc = App.ActiveDocument if App.ActiveDocument else App.newDocument()
-    delauney = makeDelauney(doc)
-    targetSketch = createSketch(doc, delauney.Name)
+    delaunay = makeDelaunay(doc)
+    targetSketch = createSketch(doc, delaunay.Name)
     targetSketch.Visibility = True
     doc.recompute()
     Gui.SendMsgToActiveView("ViewFit")
