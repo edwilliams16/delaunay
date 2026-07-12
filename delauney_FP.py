@@ -12,17 +12,18 @@ class delauney_FP():
         fp.addProperty("App::PropertyFloat", "xsize", "Parameters", "x length of target rectangle").xsize = 2*pi*10
         fp.addProperty("App::PropertyFloat", "ysize", "Parameters", "y length of target rectangle").ysize = 40
         fp.addProperty("App::PropertyFloat", "mindist", "Parameters", "minimum distance between vertices").mindist = 5
-        fp.addProperty("App::PropertyInteger", "npts", "Parameters", "number of points").npts = 80
+        fp.addProperty("App::PropertyInteger", "npts", "Parameters", "number of points (0 -> max)").npts = 0
         fp.addProperty("App::PropertyFloat", "offsetdist", "Parameters", "offset from triangles").offsetdist = -0.5
         fp.addProperty("App::PropertyFloat", "minaspect", "Parameters", "prune with height/base < minaspect").minaspect = 0.1
         fp.addProperty("App::PropertyBool", "periodic", "Parameters", "make periodic in x").periodic = True
+        fp.addProperty("App::PropertyInteger", "randomseed", "Parameters", "seed for random generator").randomseed = 1234
         fp.Proxy = self
 
     def poissonPoints(self, fp):
         '''
         creates npts in a xmax x ymax rectangle randomly distributed at least radius apart
         '''
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(seed = fp.randomseed)
         engine = qmc.PoissonDisk(d=2, radius=fp.mindist, rng=rng, l_bounds =(0,0), u_bounds = (fp.xsize, fp.ysize))
         points = engine.random(fp.npts)
         return points
@@ -64,6 +65,8 @@ class delauney_FP():
         return fatList
 
     def execute(self, fp):
+        if fp.npts < 3:
+            fp.npts = max((3, int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2))))
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
         if fp.periodic:
@@ -104,7 +107,10 @@ def makeDelauney(doc):
     doc.recompute()
     return a
 
-def createSketch(doc, name):
+def createSketch(doc, delauneyname):
+    '''
+    creates target rectangle sketch
+    '''
     Sketch = doc.addObject('Sketcher::SketchObject', 'Sketch')
     geo0 = Sketch.addGeometry(Part.LineSegment(V3 (0.0, 0.0, 0.0), V3(62.83185307179586, 0.0, 0.0)))
     geo1 = Sketch.addGeometry(Part.LineSegment(V3(62.83185307179586, 0.0, 0.0), V3(62.83185307179586, 40.0, 0.0)))
@@ -121,8 +127,8 @@ def createSketch(doc, name):
     Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 1, -1, 1))
     Sketch.addConstraint(Sketcher.Constraint('DistanceY', geo1, 1, geo1, 2, 40.0))
     Sketch.addConstraint(Sketcher.Constraint('DistanceX', geo2, 2, geo2, 1, 62.83185307179586))
-    Sketch.setExpression('Constraints[10]', f'{name}.xsize')
-    Sketch.setExpression('Constraints[9]', f'{name}.ysize')
+    Sketch.setExpression('Constraints[10]', f'{delauneyname}.xsize')
+    Sketch.setExpression('Constraints[9]', f'{delauneyname}.ysize')
     Sketch.Visibility = False
     Sketch.ViewObject.Visibility = False
     return Sketch
