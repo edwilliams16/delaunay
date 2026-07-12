@@ -112,6 +112,8 @@ class delaunay_FP():
         fatWires = self.pruneSkinny(fp, prunedOffsetWires)
         #Part.show(Part.Compound(fatWires), 'fatWires')
         fp.Shape = Part.Compound(fatWires)
+        App.Console.PrintMessage(f'No. triangles: {len(fatWires)}, thin pruned: {len(prunedOffsetWires) - len(fatWires)}\n')
+
 
 def makeDelaunay(doc):
     a=doc.addObject("Part::FeaturePython","Delaunay")
