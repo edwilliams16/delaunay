@@ -18,6 +18,8 @@ class delaunay_FP():
         fp.addProperty("App::PropertyBool", "periodic", "Parameters", "make periodic in x").periodic = True
         fp.addProperty("App::PropertyInteger", "randomseed", "Parameters", "seed for random generator").randomseed = 1234
         fp.Proxy = self
+        self.usingMax = True
+        self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
 
     def poissonPoints(self, fp):
         '''
@@ -64,12 +66,20 @@ class delaunay_FP():
                 fatList.append(wire)
         return fatList
 
+    def onChanged(self, fp, prop):
+        if prop == 'mindist' and self.usingMax:
+            self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+            fp.npts = self.maxnpts
+
     def execute(self, fp):
-        maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+        #limit 3 <= npts <= maxnpts else set to maxnpts
         if fp.npts < 3:
-            fp.npts = max((3, maxnpts))
-        if fp.npts > maxnpts:
-            fp.npts = maxnpts
+            fp.npts = max((3, self.maxnpts))
+        elif fp.npts > self.maxnpts:
+            fp.npts = self.maxnpts
+        else:
+            self.usingMax = False
+
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
         if fp.periodic:
