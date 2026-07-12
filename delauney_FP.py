@@ -65,6 +65,7 @@ class delauney_FP():
 
     def execute(self, fp):
         pointsa = self.poissonPoints(fp)
+        App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
         if fp.periodic:
             points = self.perioidicallyExtendPoints(fp, pointsa)
         else:
@@ -103,9 +104,38 @@ def makeDelauney(doc):
     doc.recompute()
     return a
 
+def createSketch(doc, name):
+    Sketch = doc.addObject('Sketcher::SketchObject', 'Sketch')
+    geo0 = Sketch.addGeometry(Part.LineSegment(V3 (0.0, 0.0, 0.0), V3(62.83185307179586, 0.0, 0.0)))
+    geo1 = Sketch.addGeometry(Part.LineSegment(V3(62.83185307179586, 0.0, 0.0), V3(62.83185307179586, 40.0, 0.0)))
+    geo2 = Sketch.addGeometry(Part.LineSegment(V3(62.83185307179586, 40.0, 0.0), V3(0.0, 40.0, 0.0)))
+    geo3 = Sketch.addGeometry(Part.LineSegment(V3(0.0, 40.0, 0.0), V3(0.0, 0.0, 0.0)))
+    Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 2, geo1, 1))
+    Sketch.addConstraint(Sketcher.Constraint('Coincident', geo1, 2, geo2, 1))
+    Sketch.addConstraint(Sketcher.Constraint('Coincident', geo2, 2, geo3, 1))
+    Sketch.addConstraint(Sketcher.Constraint('Coincident', geo3, 2, geo0, 1))
+    Sketch.addConstraint(Sketcher.Constraint('Horizontal', geo0))
+    Sketch.addConstraint(Sketcher.Constraint('Horizontal', geo2))
+    Sketch.addConstraint(Sketcher.Constraint('Vertical', geo1))
+    Sketch.addConstraint(Sketcher.Constraint('Vertical', geo3))
+    Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 1, -1, 1))
+    Sketch.addConstraint(Sketcher.Constraint('DistanceY', geo1, 1, geo1, 2, 40.0))
+    Sketch.addConstraint(Sketcher.Constraint('DistanceX', geo2, 2, geo2, 1, 62.83185307179586))
+    Sketch.setExpression('Constraints[10]', f'{name}.xsize')
+    Sketch.setExpression('Constraints[9]', f'{name}.ysize')
+    Sketch.Visibility = False
+    Sketch.ViewObject.Visibility = False
+    return Sketch
+
+
+
 if __name__ == "__main__":
     doc = App.ActiveDocument if App.ActiveDocument else App.newDocument()
-    makeDelauney(doc)
+    delauney = makeDelauney(doc)
+    targetSketch = createSketch(doc, delauney.Name)
+    targetSketch.Visibility = True
+    doc.recompute()
+    Gui.SendMsgToActiveView("ViewFit")
 
 
 
