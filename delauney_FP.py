@@ -14,9 +14,10 @@ class delaunay_FP():
         fp.addProperty("App::PropertyFloat", "mindist", "Parameters", "minimum distance between vertices").mindist = 5
         fp.addProperty("App::PropertyInteger", "npts", "Parameters", "number of points (0 -> max)").npts = 100
         fp.addProperty("App::PropertyFloat", "offsetdist", "Parameters", "offset from triangles").offsetdist = -0.5
-        fp.addProperty("App::PropertyFloat", "minaspect", "Parameters", "prune with height/base < minaspect").minaspect = 0.1
+        fp.addProperty("App::PropertyFloat", "minaspect", "Pruning", "prune with height/base < minaspect").minaspect = 0.1
         fp.addProperty("App::PropertyBool", "periodic", "Parameters", "make periodic in x").periodic = True
         fp.addProperty("App::PropertyInteger", "randomseed", "Parameters", "seed for random generator").randomseed = 1234
+        fp.addProperty("App::PropertyFloat", "percentbyarea", "Pruning", "prune by area").percentbyarea = 100
         fp.Proxy = self
         #self.usingMax = True
         #self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
@@ -65,24 +66,23 @@ class delaunay_FP():
             if ar > fp.minaspect:
                 fatList.append(wire)
         return fatList
-    '''
-    def onChanged(self, fp, prop):
-        self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
-        if prop in ['mindist', 'xsize', 'ysize'] and self.usingMax:
-            fp.npts = self.maxnpts
-        if prop == 'npts':
-            if fp.npts < 3:
-                fp.npts = max((3, self.maxnpts))
-            elif fp.npts > self.maxnpts or self.usingMax:
-                fp.npts = self.maxnpts
-            else:
-                self.usingMax = False
-    '''
+
+    def pruneSmall(self, fp, wires):
+        if len(wires) > 0:
+            sortedwires = sorted(wires, key = lambda wire: -Part.makeFace(wire).Area ) #decreasing area
+            numberbigwires = round((fp.percentbyarea/100)*len(wires))
+            return sortedwires[:numberbigwires]
+        else:
+            return wires
+
     def execute(self, fp):
         #limit 3 <= npts <= maxnpts else set to max(3,maxnpts)
         maxnpts = max(3,int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2))) #close packed array
         if fp.npts < 3 or fp.npts > maxnpts:
             fp.npts = maxnpts
+
+        fp.percentbyarea = min(100, max(0, fp.percentbyarea))
+        fp.minaspect = max(0, fp.minaspect)
 
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
@@ -114,9 +114,10 @@ class delaunay_FP():
         prunedOffsetWires = self.pruneWires(fp, offsetWires)
         #Part.show(Part.Compound(prunedOffsetWires), 'PrunedOffsetWires')
         fatWires = self.pruneSkinny(fp, prunedOffsetWires)
+        bigWires = self.pruneSmall(fp, fatWires)
         #Part.show(Part.Compound(fatWires), 'fatWires')
-        fp.Shape = Part.Compound(fatWires)
-        App.Console.PrintMessage(f'No. triangles: {len(fatWires)}, thin pruned: {len(prunedOffsetWires) - len(fatWires)}\n')
+        fp.Shape = Part.Compound(bigWires)
+        App.Console.PrintMessage(f'No. triangles: {len(bigWires)}, no. pruned: {len(prunedOffsetWires) - len(bigWires)}\n')
 
 
 def makeDelaunay(doc):
@@ -128,12 +129,12 @@ def makeDelaunay(doc):
 
 def createSketch(doc, delaunayname):
     '''
-    creates target rectangle sketch
+    creates target xsize * ysize rectangle sketch
     '''
     Sketch = doc.addObject('Sketcher::SketchObject', 'Sketch')
-    geo0 = Sketch.addGeometry(Part.LineSegment(V3 (0.0, 0.0, 0.0), V3(62.83185307179586, 0.0, 0.0)))
-    geo1 = Sketch.addGeometry(Part.LineSegment(V3(62.83185307179586, 0.0, 0.0), V3(62.83185307179586, 40.0, 0.0)))
-    geo2 = Sketch.addGeometry(Part.LineSegment(V3(62.83185307179586, 40.0, 0.0), V3(0.0, 40.0, 0.0)))
+    geo0 = Sketch.addGeometry(Part.LineSegment(V3 (0.0, 0.0, 0.0), V3(20*pi, 0.0, 0.0)))
+    geo1 = Sketch.addGeometry(Part.LineSegment(V3(20*pi, 0.0, 0.0), V3(20*pi, 40.0, 0.0)))
+    geo2 = Sketch.addGeometry(Part.LineSegment(V3(20*pi, 40.0, 0.0), V3(0.0, 40.0, 0.0)))
     geo3 = Sketch.addGeometry(Part.LineSegment(V3(0.0, 40.0, 0.0), V3(0.0, 0.0, 0.0)))
     Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 2, geo1, 1))
     Sketch.addConstraint(Sketcher.Constraint('Coincident', geo1, 2, geo2, 1))
@@ -145,11 +146,9 @@ def createSketch(doc, delaunayname):
     Sketch.addConstraint(Sketcher.Constraint('Vertical', geo3))
     Sketch.addConstraint(Sketcher.Constraint('Coincident', geo0, 1, -1, 1))
     Sketch.addConstraint(Sketcher.Constraint('DistanceY', geo1, 1, geo1, 2, 40.0))
-    Sketch.addConstraint(Sketcher.Constraint('DistanceX', geo2, 2, geo2, 1, 62.83185307179586))
+    Sketch.addConstraint(Sketcher.Constraint('DistanceX', geo2, 2, geo2, 1, 20*pi))
     Sketch.setExpression('Constraints[10]', f'{delaunayname}.xsize')
     Sketch.setExpression('Constraints[9]', f'{delaunayname}.ysize')
-    Sketch.Visibility = False
-    Sketch.ViewObject.Visibility = False
     return Sketch
 
 
