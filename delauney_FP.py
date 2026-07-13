@@ -86,12 +86,17 @@ class delaunay_FP():
 
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
+        if len(pointsa) < 3:
+            App.Console.PrintMessage('Not enough points created to triangulate\n')
+            fp.Shape = Part.Shape()
+            return
+
         if fp.periodic:
             points = self.perioidicallyExtendPoints(fp, pointsa)
         else:
             points = pointsa
 
-        tri = Delaunay(points)
+        tri = Delaunay(points, qhull_options = "QJ")
         wires = list()
         for simplex in tri.simplices:
             pts = [points[i] for i in simplex]
