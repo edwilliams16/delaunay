@@ -12,18 +12,18 @@ class delaunay_FP():
         fp.addProperty("App::PropertyFloat", "xsize", "Parameters", "x length of target rectangle").xsize = 2*pi*10
         fp.addProperty("App::PropertyFloat", "ysize", "Parameters", "y length of target rectangle").ysize = 40
         fp.addProperty("App::PropertyFloat", "mindist", "Parameters", "minimum distance between vertices").mindist = 5
-        fp.addProperty("App::PropertyInteger", "npts", "Parameters", "number of points (0 -> max)").npts = 0
+        fp.addProperty("App::PropertyInteger", "npts", "Parameters", "number of points (0 -> max)").npts = 100
         fp.addProperty("App::PropertyFloat", "offsetdist", "Parameters", "offset from triangles").offsetdist = -0.5
         fp.addProperty("App::PropertyFloat", "minaspect", "Parameters", "prune with height/base < minaspect").minaspect = 0.1
         fp.addProperty("App::PropertyBool", "periodic", "Parameters", "make periodic in x").periodic = True
         fp.addProperty("App::PropertyInteger", "randomseed", "Parameters", "seed for random generator").randomseed = 1234
         fp.Proxy = self
-        self.usingMax = True
-        self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+        #self.usingMax = True
+        #self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
 
     def poissonPoints(self, fp):
         '''
-        creates npts in a xmax x ymax rectangle randomly distributed at least radius apart
+        creates npts in a xsize x ysize rectangle randomly distributed at least mindist apart
         '''
         rng = np.random.default_rng(seed = fp.randomseed)
         engine = qmc.PoissonDisk(d=2, radius=fp.mindist, rng=rng, l_bounds =(0,0), u_bounds = (fp.xsize, fp.ysize))
@@ -65,20 +65,24 @@ class delaunay_FP():
             if ar > fp.minaspect:
                 fatList.append(wire)
         return fatList
-
+    '''
     def onChanged(self, fp, prop):
-        if prop == 'mindist' and self.usingMax:
-            self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+        self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+        if prop in ['mindist', 'xsize', 'ysize'] and self.usingMax:
             fp.npts = self.maxnpts
-
+        if prop == 'npts':
+            if fp.npts < 3:
+                fp.npts = max((3, self.maxnpts))
+            elif fp.npts > self.maxnpts or self.usingMax:
+                fp.npts = self.maxnpts
+            else:
+                self.usingMax = False
+    '''
     def execute(self, fp):
-        #limit 3 <= npts <= maxnpts else set to maxnpts
-        if fp.npts < 3:
-            fp.npts = max((3, self.maxnpts))
-        elif fp.npts > self.maxnpts:
-            fp.npts = self.maxnpts
-        else:
-            self.usingMax = False
+        #limit 3 <= npts <= maxnpts else set to max(3,maxnpts)
+        maxnpts = max(3,int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2))) #close packed array
+        if fp.npts < 3 or fp.npts > maxnpts:
+            fp.npts = maxnpts
 
         pointsa = self.poissonPoints(fp)
         App.Console.PrintMessage(f'number of points made {len(pointsa)} asked  {fp.npts}\n')
