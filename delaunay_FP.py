@@ -2,8 +2,8 @@
 # FreeCAD Macro Header
 # ==============================================================================
 # Name:             Delaunay_FP
-# Version:          1.0.1
-# Date:             2026-07-13
+# Version:          1.0.
+# Date:             2026-07-18
 # Author:           Ed Williams
 # Contact/Forum:    edwilliams16
 # License:          LGPL-2.1
@@ -42,20 +42,27 @@
 # 3. Click "Execute".
 # ==============================================================================
 '''
+#for pyzo
 import inspect
 __file__ = inspect.getfile(inspect.currentframe())
 '''
 
+import FreeCAD as App
 import numpy as np
 from scipy.stats import qmc
 from scipy.spatial import Delaunay
 import Part
 from math import pi
+from pathlib import Path as pyPath
 V3 = App.Vector
 
 class delaunay_FP():
     def __init__(self, fp):
-        self.__module__ = 'delaunay_FP'  #references the filename of this modue
+        try:
+            self.__module__ = pyPath(__file__).stem  # = 'delaunay_FP'
+        except NameError:
+            App.Console.PrintWarning(f'Module name not set to filename. Save/restore will break.')
+
         fp.addProperty("App::PropertyFloat", "xsize", "Parameters", "x length of target rectangle").xsize = 2*pi*10
         fp.addProperty("App::PropertyFloat", "ysize", "Parameters", "y length of target rectangle").ysize = 40
         fp.addProperty("App::PropertyFloat", "mindist", "Parameters", "minimum distance between vertices").mindist = 5
