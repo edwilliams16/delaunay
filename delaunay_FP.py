@@ -33,7 +33,7 @@
 #                   minaspect: This prunes skinny triangles with
 #                          height/base < minaspect
 #
-#Output             A compound of triangular wires and a rectangular xsize * ysize
+# Output             A compound of triangular wires and a rectangular xsize * ysize
 #                          sketch
 # ==============================================================================
 # Usage:
@@ -41,6 +41,10 @@
 # 2. Open this macro in FreeCAD (Macro -> Macros -> Edit).
 # 3. Click "Execute".
 # ==============================================================================
+'''
+import inspect
+__file__ = inspect.getfile(inspect.currentframe())
+'''
 
 import numpy as np
 from scipy.stats import qmc
@@ -51,6 +55,7 @@ V3 = App.Vector
 
 class delaunay_FP():
     def __init__(self, fp):
+        self.__module__ = 'delaunay_FP'  #references the filename of this modue
         fp.addProperty("App::PropertyFloat", "xsize", "Parameters", "x length of target rectangle").xsize = 2*pi*10
         fp.addProperty("App::PropertyFloat", "ysize", "Parameters", "y length of target rectangle").ysize = 40
         fp.addProperty("App::PropertyFloat", "mindist", "Parameters", "minimum distance between vertices").mindist = 5
@@ -61,8 +66,7 @@ class delaunay_FP():
         fp.addProperty("App::PropertyInteger", "randomseed", "Parameters", "seed for random generator").randomseed = 1234
         fp.addProperty("App::PropertyFloat", "percentbyarea", "Pruning", "prune by area").percentbyarea = 100
         fp.Proxy = self
-        #self.usingMax = True
-        #self.maxnpts = int(fp.xsize *fp.ysize /(0.866 * fp.mindist**2)) #close packed array
+
 
     def poissonPoints(self, fp):
         '''
@@ -207,8 +211,5 @@ if __name__ == "__main__":
     targetSketch.Visibility = True
     doc.recompute()
     Gui.SendMsgToActiveView("ViewFit")
-
-
-
 
 
