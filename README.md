@@ -1,3 +1,4 @@
+```
  Name:             Delaunay_FP
  Version:          1.0.
  Date:             2026-07-18
@@ -38,3 +39,4 @@
  2. Open this macro in FreeCAD (Macro -> Macros -> Edit).
  3. Click "Execute".
  ==============================================================================
+```
